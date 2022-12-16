@@ -17,7 +17,7 @@ def readProperties():
 def getLoginToken(firewallIP, port, userName, password):
     print("processDevice()")
 
-def processDevice(firewallIP, port, userName, password):
+def processDevice(firewallIP, port, interface, scope, userName, password):
     warnings.simplefilter('ignore', InsecureRequestWarning)
     headers = {
         "User-Agent": "Mozilla",
@@ -31,19 +31,26 @@ def processDevice(firewallIP, port, userName, password):
                              headers=headers, verify=False, data=data)
     cookies=session.cookies
     items = cookies.items()
-    response2 = session.get(urlstub + "/api/v2/monitor/system/interface/")
+    response2 = session.get(urlstub + "/api/v2/monitor/system/interface?scope=" + scope)
+    response3 = session.get(urlstub + "/api/v2/cmdb/firewall/address?scope=" + scope)
+    addresses = json.loads(response3.text)
+    for addy in addresses["results"]:
+        if addy["name"].startswith("ban-"):
+            print(addy)
     interfaces = json.loads(response2.text)
-    wanip = interfaces["results"]["wan1"]["ip"]
+    wanip = interfaces["results"][interface]["ip"]
     print(f'processDevice() returned {wanip}')
-    print(response.text)
+
 def main():
     readProperties()
     ip = os.getenv("ip")
     port = os.getenv("port")
     username = os.getenv("username")
     password = os.getenv("password")
+    ips = json.loads(os.getenv("ips"))
+    for theip in ips:
+        processDevice(theip["ip"], str(theip["port"]), theip["interface"], theip["scope"], username, password)
 
-    processDevice(ip, port, username, password)
 
 if __name__ == '__main__':
     main()
