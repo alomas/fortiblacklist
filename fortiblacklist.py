@@ -5,6 +5,18 @@ import requests
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 import warnings
 
+def createAddress(session, urlstub, scope, address):
+    data = address
+    response = session.post(urlstub + "/api/v2/cmdb/firewall/address?vdom=" + scope, data=data)
+    print(response.text)
+
+
+def getAddresses(session, urlstub, scope):
+    response3 = session.get(urlstub + "/api/v2/cmdb/firewall/address?scope=" + scope)
+    addresses = json.loads(response3.text)
+    for addy in addresses["results"]:
+        createAddress(session, urlstub, scope, addy)
+    return addresses
 
 def getWanIP(session, urlstub, interface, scope):
     response = session.get(urlstub + "/api/v2/monitor/system/interface?scope=" + scope)
@@ -41,13 +53,16 @@ def processDevice(fwinfo, userName, password):
     response = session.post(url=urlstub + "/logincheck",
                              headers=headers, verify=False, data=data)
     wanip = getWanIP(session, urlstub, interface, scope)
-    response3 = session.get(urlstub + "/api/v2/cmdb/firewall/address?scope=" + scope)
     print(f'Begin: {firewallIP}')
-    addresses = json.loads(response3.text)
+    addresses = getAddresses(session, urlstub, scope)
     for addy in addresses["results"]:
         if addy["name"].startswith("ban-"):
             print(addy)
+    newaddresses = os.getenv("newaddresses")
+    newaddressdict = json.loads(newaddresses)
     print(f'processDevice() returned {wanip}')
+    #for address in newaddressdict:
+       # createAddress(session, urlstub, scope, address)
     print(f'End: {firewallIP}')
 
 def main():
