@@ -7,7 +7,16 @@ import warnings
 
 def createAddress(session, urlstub, scope, address):
     data = address
-    response = session.post(urlstub + "/api/v2/cmdb/firewall/address?vdom=" + scope, data=data)
+    data = {
+  "name": "ban-demo2",
+  "subnet": "1.1.1.1/32",
+  "color": "0"
+}
+    headers = {"Content-Type": "application/json"}
+    cookies = session.cookies
+    items = cookies.get_dict()
+    response = session.post(urlstub + "/api/v2/cmdb/firewall/address?datasource=1&vdom=" + scope, json=data, cookies=items)
+    response = session.post("http://172.27.12.11" + "/api/v2/cmdb/firewall/address?datasource=1&vdom=" + scope, json=data, cookies=items)
     print(response.text)
 
 
@@ -57,7 +66,7 @@ def processDevice(fwinfo, userName, password):
     addresses = getAddresses(session, urlstub, scope)
     for addy in addresses["results"]:
         if addy["name"].startswith("ban-"):
-            print(addy)
+            print(f'{addy["name"]}: {addy["subnet"]}')
     newaddresses = os.getenv("newaddresses")
     newaddressdict = json.loads(newaddresses)
     print(f'processDevice() returned {wanip}')
