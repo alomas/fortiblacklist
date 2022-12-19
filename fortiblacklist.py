@@ -5,37 +5,41 @@ import requests
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 import warnings
 
-def createAddress(session, urlstub, scope, address):
+def createAddress(session, urlstub, scope, address, csrf):
     data = address
-    data = {
-  "name": "ban-demo2",
-  "subnet": "1.1.1.1/32",
-  "color": "0"
-}
-    headers = {"Content-Type": "application/json"}
-    cookies = session.cookies
-    items = cookies.get_dict()
-    response = session.post(urlstub + "/api/v2/cmdb/firewall/address?datasource=1&vdom=" + scope, json=data, cookies=items)
-    response = session.post("http://172.27.12.11" + "/api/v2/cmdb/firewall/address?datasource=1&vdom=" + scope, json=data, cookies=items)
+
+    headers = {"Content-Type": "application/json",
+               "X-CSRFTOKEN": csrf }
+
+    proxies = {
+        'http': 'http://localhost:8080',
+        'https': 'http://localhost:8080'
+    }
+    response = session.post(urlstub + "/api/v2/cmdb/firewall/address?datasource=1&vdom=" + scope, json=data, headers=headers, proxies=proxies, verify=False)
+    #response = session.put(urlstub + "/api/v2/cmdb/firewall/address/ban-demo3?datasource=1&vdom=" + scope, json=data, headers=headers, proxies=proxies, verify=False)
     print(response.text)
 
-
-def getAddresses(session, urlstub, scope):
-    response3 = session.get(urlstub + "/api/v2/cmdb/firewall/address?scope=" + scope)
+def getAddresses(session, urlstub, scope, cookies):
+    response3 = session.get(urlstub + "/api/v2/cmdb/firewall/address?scope=" + scope, verify=False)
     addresses = json.loads(response3.text)
-    for addy in addresses["results"]:
-        createAddress(session, urlstub, scope, addy)
     return addresses
 
 def getWanIP(session, urlstub, interface, scope):
-    response = session.get(urlstub + "/api/v2/monitor/system/interface?scope=" + scope)
+    response = session.get(urlstub + "/api/v2/monitor/system/interface?scope=" + scope, verify=False)
 
     interfaces = json.loads(response.text)
     wanip = interfaces["results"][interface]["ip"]
     return wanip
 
+def loadBlacklistAddresses():
+    f = open('blacklist.json', "r")
+    blacklist = json.loads(f.read())
+    print(blacklist)
+    return blacklist
+
 def processDevice(fwinfo, userName, password):
     warnings.simplefilter('ignore', InsecureRequestWarning)
+    blacklist = loadBlacklistAddresses()
     headers = {
         "User-Agent": "Mozilla",
         "X-Requested-With": "MrPython",
@@ -59,19 +63,27 @@ def processDevice(fwinfo, userName, password):
     session = requests.Session()
 
     urlstub = "https://" + firewallIP + ":" + port
+    proxies = {
+        'http': 'http://localhost:8080',
+        'https': 'http://localhost:8080'
+    }
     response = session.post(url=urlstub + "/logincheck",
-                             headers=headers, verify=False, data=data)
+                             headers=headers, verify=False, proxies=proxies, data=data)
+    cookies = session.cookies.get_dict()
+
+    csrf = cookies["ccsrftoken"].replace('"', '')
+
     wanip = getWanIP(session, urlstub, interface, scope)
     print(f'Begin: {firewallIP}')
-    addresses = getAddresses(session, urlstub, scope)
+    addresses = getAddresses(session, urlstub, scope, csrf)
     for addy in addresses["results"]:
         if addy["name"].startswith("ban-"):
             print(f'{addy["name"]}: {addy["subnet"]}')
     newaddresses = os.getenv("newaddresses")
     newaddressdict = json.loads(newaddresses)
     print(f'processDevice() returned {wanip}')
-    #for address in newaddressdict:
-       # createAddress(session, urlstub, scope, address)
+    for address in blacklist:
+       createAddress(session, urlstub, scope, address, csrf)
     print(f'End: {firewallIP}')
 
 def main():
