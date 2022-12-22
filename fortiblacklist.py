@@ -23,8 +23,25 @@ def doesAddressExist(session, urlstub, scope, address, csrf):
             return True
     return False
 
+def doesAddressGroupExist(session, urlstub, scope, addressgroup, csrf):
+    data = addressgroup
+    headers = {"Content-Type": "application/json",
+               "X-CSRFTOKEN": csrf }
 
-def createAddress(session, urlstub, scope, address, csrf):
+    proxies = {
+        #'http': 'http://localhost:8080',
+        #'https': 'http://localhost:8080'
+    }
+    response = session.get(urlstub + f'/api/v2/cmdb/firewall/addrgrp/{data["name"]}?datasource=1&vdom=' + scope, json=data, headers=headers, proxies=proxies, verify=False)
+
+    responsedict = json.loads(response.text)
+    if "status" in responsedict:
+        status = responsedict["status"]
+        if status == "success":
+            return True
+    return False
+
+def createAddress(session, urlstub, scope, address, bannedlist, csrf):
     data = address
 
     headers = {"Content-Type": "application/json",
@@ -41,9 +58,13 @@ def createAddress(session, urlstub, scope, address, csrf):
     else:
         print(f'{address["subnet"]} does not exist, creating...', end=" ")
         response = session.post(urlstub + "/api/v2/cmdb/firewall/address?datasource=1&vdom=" + scope, json=data, headers=headers, proxies=proxies, verify=False)
+
     responsedict = json.loads(response.text)
     status = responsedict["status"]
     print(status)
+    if status == "success":
+        bannedlist.append(address)
+    return bannedlist
 
 def getAddresses(session, urlstub, scope, cookies):
     response3 = session.get(urlstub + "/api/v2/cmdb/firewall/address?scope=" + scope, verify=False)
@@ -78,7 +99,7 @@ def makeBlacklist():
 
 def processDevice(fwinfo, userName, password):
     warnings.simplefilter('ignore', InsecureRequestWarning)
-    blacklist = loadBlacklistAddresses()
+    #blacklist = loadBlacklistAddresses()
     blacklist = makeBlacklist()
 
     headers = {
@@ -104,8 +125,8 @@ def processDevice(fwinfo, userName, password):
 
     urlstub = "https://" + firewallIP + ":" + port
     proxies = {
-        'http': 'http://localhost:8080',
-        'https': 'http://localhost:8080'
+        #'http': 'http://localhost:8080',
+        #'https': 'http://localhost:8080'
     }
     response = session.post(url=urlstub + "/logincheck",
                              headers=headers, verify=False, proxies=proxies, data=data)
@@ -120,8 +141,9 @@ def processDevice(fwinfo, userName, password):
 #        if addy["name"].startswith("ban-"):
 #            print(f'{addy["name"]}: {addy["subnet"]}')
     print(f'processDevice() returned {wanip}')
+    blacklistedaddresses = []
     for address in blacklist:
-       createAddress(session, urlstub, scope, address, csrf)
+       blacklistedaddresses = createAddress(session, urlstub, scope, address, blacklistedaddresses, csrf)
     print(f'End: {firewallIP}')
 
 def main():
