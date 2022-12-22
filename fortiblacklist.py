@@ -5,6 +5,25 @@ import requests
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 import warnings
 
+def doesAddressExist(session, urlstub, scope, address, csrf):
+    data = address
+    headers = {"Content-Type": "application/json",
+               "X-CSRFTOKEN": csrf }
+
+    proxies = {
+        #'http': 'http://localhost:8080',
+        #'https': 'http://localhost:8080'
+    }
+    response = session.get(urlstub + f'/api/v2/cmdb/firewall/address/{data["name"]}?datasource=1&vdom=' + scope, json=data, headers=headers, proxies=proxies, verify=False)
+
+    responsedict = json.loads(response.text)
+    if "status" in responsedict:
+        status = responsedict["status"]
+        if status == "success":
+            return True
+    return False
+
+
 def createAddress(session, urlstub, scope, address, csrf):
     data = address
 
@@ -12,12 +31,19 @@ def createAddress(session, urlstub, scope, address, csrf):
                "X-CSRFTOKEN": csrf }
 
     proxies = {
-        'http': 'http://localhost:8080',
-        'https': 'http://localhost:8080'
+        #'http': 'http://localhost:8080',
+        #'https': 'http://localhost:8080'
     }
-    response = session.post(urlstub + "/api/v2/cmdb/firewall/address?datasource=1&vdom=" + scope, json=data, headers=headers, proxies=proxies, verify=False)
-    #response = session.put(urlstub + "/api/v2/cmdb/firewall/address/ban-demo3?datasource=1&vdom=" + scope, json=data, headers=headers, proxies=proxies, verify=False)
-    print(response.text)
+    addressExists = doesAddressExist(session, urlstub,scope,address, csrf)
+    if addressExists:
+        print(f'{address["subnet"]} exists, updating...', end= " ")
+        response = session.put(urlstub + f'/api/v2/cmdb/firewall/address/{address["name"]}?datasource=1&vdom=' + scope, json=data, headers=headers, proxies=proxies, verify=False)
+    else:
+        print(f'{address["subnet"]} does not exist, creating...', end=" ")
+        response = session.post(urlstub + "/api/v2/cmdb/firewall/address?datasource=1&vdom=" + scope, json=data, headers=headers, proxies=proxies, verify=False)
+    responsedict = json.loads(response.text)
+    status = responsedict["status"]
+    print(status)
 
 def getAddresses(session, urlstub, scope, cookies):
     response3 = session.get(urlstub + "/api/v2/cmdb/firewall/address?scope=" + scope, verify=False)
@@ -34,12 +60,27 @@ def getWanIP(session, urlstub, interface, scope):
 def loadBlacklistAddresses():
     f = open('blacklist.json', "r")
     blacklist = json.loads(f.read())
-    print(blacklist)
+    #print(blacklist)
     return blacklist
+
+def makeBlacklist():
+    iplist = []
+    with open('ips.txt') as f:
+        lines = f.readlines()
+        for line in lines:
+            linedict = {}
+            linedict["name"] = "autoban-" + line.replace("\n","")
+            linedict["subnet"] = line.replace("\n", "") + "/32"
+            iplist.append(linedict)
+            print(linedict)
+    print(iplist)
+    return iplist
 
 def processDevice(fwinfo, userName, password):
     warnings.simplefilter('ignore', InsecureRequestWarning)
     blacklist = loadBlacklistAddresses()
+    blacklist = makeBlacklist()
+
     headers = {
         "User-Agent": "Mozilla",
         "X-Requested-With": "MrPython",
@@ -50,7 +91,6 @@ def processDevice(fwinfo, userName, password):
     port = "443"
     interface = "wan1"
     scope = "global"
-
     if "ip" in fwinfo:
         firewallIP = fwinfo["ip"]
     if "port" in fwinfo:
@@ -76,11 +116,9 @@ def processDevice(fwinfo, userName, password):
     wanip = getWanIP(session, urlstub, interface, scope)
     print(f'Begin: {firewallIP}')
     addresses = getAddresses(session, urlstub, scope, csrf)
-    for addy in addresses["results"]:
-        if addy["name"].startswith("ban-"):
-            print(f'{addy["name"]}: {addy["subnet"]}')
-    newaddresses = os.getenv("newaddresses")
-    newaddressdict = json.loads(newaddresses)
+#    for addy in addresses["results"]:
+#        if addy["name"].startswith("ban-"):
+#            print(f'{addy["name"]}: {addy["subnet"]}')
     print(f'processDevice() returned {wanip}')
     for address in blacklist:
        createAddress(session, urlstub, scope, address, csrf)
