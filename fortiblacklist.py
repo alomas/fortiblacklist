@@ -41,6 +41,31 @@ def doesAddressGroupExist(session, urlstub, scope, addressgroup, csrf):
             return True
     return False
 
+def createAddressGroup(session, urlstub, scope, addressgroup, bannedlist, csrf):
+    data = addressgroup
+
+    headers = {"Content-Type": "application/json",
+               "X-CSRFTOKEN": csrf }
+
+    proxies = {
+        #'http': 'http://localhost:8080',
+        #'https': 'http://localhost:8080'
+    }
+    addressExists = doesAddressGroupExist(session, urlstub,scope,addressgroup, csrf)
+    if addressExists:
+        print(f'{addressgroup["subnet"]} exists, updating...', end= " ")
+        response = session.put(urlstub + f'/api/v2/cmdb/firewall/addrgrp/{addressgroup["name"]}?datasource=1&vdom=' + scope, json=data, headers=headers, proxies=proxies, verify=False)
+    else:
+        print(f'{addressgroup["subnet"]} does not exist, creating...', end=" ")
+        response = session.post(urlstub + "/api/v2/cmdb/firewall/address?datasource=1&vdom=" + scope, json=data, headers=headers, proxies=proxies, verify=False)
+
+    responsedict = json.loads(response.text)
+    status = responsedict["status"]
+    print(status)
+    if status == "success":
+        bannedlist.append(address)
+    return bannedlist
+
 def createAddress(session, urlstub, scope, address, bannedlist, csrf):
     data = address
 
