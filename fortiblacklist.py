@@ -66,6 +66,11 @@ def createAddress(session, urlstub, scope, address, bannedlist, csrf):
         bannedlist.append(address)
     return bannedlist
 
+def getAddressGroup(session, urlstub, scope, cookies):
+    response3 = session.get(urlstub + "/api/v2/cmdb/firewall/addrgrp?scope=" + scope, verify=False)
+    addresses = json.loads(response3.text)
+    return addresses
+
 def getAddresses(session, urlstub, scope, cookies):
     response3 = session.get(urlstub + "/api/v2/cmdb/firewall/address?scope=" + scope, verify=False)
     addresses = json.loads(response3.text)
@@ -144,6 +149,12 @@ def processDevice(fwinfo, userName, password):
     blacklistedaddresses = []
     for address in blacklist:
        blacklistedaddresses = createAddress(session, urlstub, scope, address, blacklistedaddresses, csrf)
+    addressGroup = { "name": "autoban-group1"}
+    addressGroupExists = doesAddressGroupExist(session, urlstub, scope, addressGroup, csrf )
+    if addressGroupExists:
+        print("Group exists")
+    else:
+        print("Group does not exist.")
     print(f'End: {firewallIP}')
 
 def main():
