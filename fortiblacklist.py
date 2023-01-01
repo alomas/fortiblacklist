@@ -49,7 +49,7 @@ def getAddressObjects(session, urlstub, scope, csrf):
                         "name": result["name"]
                     }
                     blacklist.append(tempaddr)
-    print(f'Built blacklist with {len(blacklist)} items.')
+    print(f'\tBuilt blacklist with {len(blacklist)} items.')
     return blacklist
 
 
@@ -85,7 +85,7 @@ def createAddressGroup(session, urlstub, scope, addressgroup, blacklistnames, cs
     }
     addressGroupExists = doesAddressGroupExist(session, urlstub, scope, addressgroup, csrf)
     if addressGroupExists:
-        print(f'{addressgroup["name"]} exists, updating...', end=" ")
+        print(f'\t{addressgroup["name"]} exists, updating...', end=" ")
         response = session.put(
             urlstub + f'/api/v2/cmdb/firewall/addrgrp/{addressgroup["name"]}?datasource=1&vdom=' + scope, json=data,
             headers=headers, proxies=proxies, verify=False)
@@ -94,7 +94,7 @@ def createAddressGroup(session, urlstub, scope, addressgroup, blacklistnames, cs
             "name": "autoban-group1",
             "member": blacklistnames
         }
-        print(f'{addressgroup["name"]} does not exist, creating...', end=" ")
+        print(f'\t{addressgroup["name"]} does not exist, creating...', end=" ")
         response = session.post(urlstub + "/api/v2/cmdb/firewall/addrgrp?datasource=1&vdom=" + scope, json=data,
                                 headers=headers, proxies=proxies, verify=False)
 
@@ -115,11 +115,11 @@ def createAddress(session, urlstub, scope, address, bannedlist, csrf):
     }
     addressExists = doesAddressExist(session, urlstub, scope, address, csrf)
     if addressExists:
-        print(f'{address["subnet"]} exists, updating...', end=" ")
+        print(f'\t{address["subnet"]} exists, updating...', end=" ")
         response = session.put(urlstub + f'/api/v2/cmdb/firewall/address/{address["name"]}?datasource=1&vdom=' + scope,
                                json=data, headers=headers, proxies=proxies, verify=False)
     else:
-        print(f'{address["subnet"]} does not exist, creating...', end=" ")
+        print(f'\t{address["subnet"]} does not exist, creating...', end=" ")
         response = session.post(urlstub + "/api/v2/cmdb/firewall/address?datasource=1&vdom=" + scope, json=data,
                                 headers=headers, proxies=proxies, verify=False)
 
@@ -131,7 +131,7 @@ def createAddress(session, urlstub, scope, address, bannedlist, csrf):
         if len(bannedlist) < 600:
             if shortaddr not in bannedlist:
                 bannedlist.append(shortaddr)
-                print(f'Added {shortaddr["name"]} to blacklist')
+                print(f'\tAdded {shortaddr["name"]} to blacklist')
     return bannedlist
 
 
@@ -155,7 +155,8 @@ def loadBlacklistAddresses():
 
 def makeBlacklist():
     iplist = []
-    with open('ips.txt') as f:
+    ipfile = os.getenv("ipfile")
+    with open(ipfile) as f:
         lines = f.readlines()
         for line in lines:
             linedict = {"name": "autoban-" + line.replace("\n", ""), "subnet": line.replace("\n", "") + "/32"}
@@ -203,11 +204,11 @@ def processDevice(fwinfo, userName, password):
     addressGroup = {"name": "autoban-group1"}
     addressGroupExists = doesAddressGroupExist(session, urlstub, scope, addressGroup, csrf)
     if addressGroupExists:
-        print("Group exists")
+        print("\tGroup exists")
         createAddressGroup(session, urlstub, scope, addressGroup, blacklistedaddresses, csrf)
 
     else:
-        print("Group does not exist.")
+        print("\tGroup does not exist.")
         createAddressGroup(session, urlstub, scope, addressGroup, blacklistedaddresses, csrf)
     print(f'End: {firewallIP}')
 
