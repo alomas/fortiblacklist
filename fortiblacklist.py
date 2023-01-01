@@ -220,6 +220,7 @@ def main():
     ips = json.loads(f.read())
     #ips = json.loads(os.getenv("devicelist"))
     for theip in ips:
+        print(f'Processing device {theip}...')
         processDevice(theip, username, password)
 
 
