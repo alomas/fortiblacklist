@@ -85,6 +85,10 @@ def createAddressGroup(session, urlstub, scope, addressgroup, blacklistnames, cs
     }
     addressGroupExists = doesAddressGroupExist(session, urlstub, scope, addressgroup, csrf)
     if addressGroupExists:
+        data = {
+            "name": "autoban-group1",
+            "member": blacklistnames
+        }
         print(f'\t{addressgroup["name"]} exists, updating...', end=" ")
         response = session.put(
             urlstub + f'/api/v2/cmdb/firewall/addrgrp/{addressgroup["name"]}?datasource=1&vdom=' + scope, json=data,
