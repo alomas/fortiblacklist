@@ -216,7 +216,9 @@ def processDevice(fwinfo, userName, password):
 def main():
     username = os.getenv("username")
     password = os.getenv("password")
-    ips = json.loads(os.getenv("devicelist"))
+    f = open('devicelist.json', "r")
+    ips = json.loads(f.read())
+    #ips = json.loads(os.getenv("devicelist"))
     for theip in ips:
         processDevice(theip, username, password)
 
