@@ -15,12 +15,9 @@ def doesAddressExist(session, urlstub, scope, address, csrf):
         # 'http': 'http://localhost:8080',
         # 'https': 'http://localhost:8080'
     }
-    try:
-        response = session.get(urlstub + f'/api/v2/cmdb/firewall/address/{data["name"]}?datasource=1&vdom=' + scope,
+    response = session.get(urlstub + f'/api/v2/cmdb/firewall/address/{data["name"]}?datasource=1&vdom=' + scope,
                            json=data, headers=headers, proxies=proxies, verify=False)
-        response.raise_for_status()
-    except requests.exceptions.HTTPError as err:
-        raise SystemExit(err)
+    response.raise_for_status()
 
 #    try:
 #        responsedict = json.loads("Hi")
