@@ -17,7 +17,6 @@ def doesAddressExist(session, urlstub, scope, address, csrf):
     }
     response = session.get(urlstub + f'/api/v2/cmdb/firewall/address/{data["name"]}?datasource=1&vdom=' + scope,
                            json=data, headers=headers, proxies=proxies, verify=False)
-    response.raise_for_status()
 
 #    try:
 #        responsedict = json.loads("Hi")
