@@ -10,14 +10,22 @@ def doesAddressExist(session, urlstub, scope, address, csrf):
     data = address
     headers = {"Content-Type": "application/json",
                "X-CSRFTOKEN": csrf}
-
+    # This is here in case you want to debug your code with Burp Suite
     proxies = {
         # 'http': 'http://localhost:8080',
         # 'https': 'http://localhost:8080'
     }
-    response = session.get(urlstub + f'/api/v2/cmdb/firewall/address/{data["name"]}?datasource=1&vdom=' + scope,
+    try:
+        response = session.get(urlstub + f'/api/v2/cmdb/firewall/address/{data["name"]}?datasource=1&vdom=' + scope,
                            json=data, headers=headers, proxies=proxies, verify=False)
+        response.raise_for_status()
+    except requests.exceptions.HTTPError as err:
+        raise SystemExit(err)
 
+#    try:
+#        responsedict = json.loads("Hi")
+#    except json.JSONDecodeError as err:
+#        raise SystemExit(err)
     responsedict = json.loads(response.text)
     if "status" in responsedict:
         status = responsedict["status"]
@@ -34,8 +42,12 @@ def getAddressObjects(session, urlstub, scope, csrf):
         # 'http': 'http://localhost:8080',
         # 'https': 'http://localhost:8080'
     }
-    response = session.get(urlstub + f'/api/v2/cmdb/firewall/address?datasource=1&vdom=' + scope, headers=headers,
+    try:
+        response = session.get(urlstub + f'/api/v2/cmdb/firewall/address?datasource=1&vdom=' + scope, headers=headers,
                            proxies=proxies, verify=False)
+        response.raise_for_status()
+    except requests.exceptions.HTTPError as err:
+        raise SystemExit(err)
 
     responsedict = json.loads(response.text)
     blacklist = []
@@ -214,8 +226,8 @@ def processDevice(fwinfo, userName, password):
     else:
         print("\tGroup does not exist.")
         createAddressGroup(session, urlstub, scope, addressGroup, blacklistedaddresses, csrf)
+    response = session.get(url=urlstub + "/logout", headers=headers, verify=False, proxies=proxies)
     print(f'End: {firewallIP}')
-
 
 def main():
     username = os.getenv("username")
